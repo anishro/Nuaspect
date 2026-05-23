@@ -1,0 +1,6 @@
+{
+  "name": "Nuaspect",
+  "description": "Premium therapy academic platform for registering for live sessions, accessing columns, and contacting professionals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

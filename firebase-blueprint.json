@@ -1,0 +1,155 @@
+{
+  "entities": {
+    "SessionConfig": {
+      "title": "SessionConfig",
+      "description": "Configuration for the active live therapy session",
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "description": "Topic of the live session"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the session"
+        },
+        "time": {
+          "type": "string",
+          "description": "Time of the session"
+        },
+        "price": {
+          "type": "number",
+          "description": "Active registration price in INR"
+        }
+      },
+      "required": ["topic", "date", "time", "price"]
+    },
+    "Registration": {
+      "title": "Registration",
+      "description": "Client registrations for the live session",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Full name of the client"
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the client"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Contact number of the client"
+        },
+        "topic": {
+          "type": "string",
+          "description": "Topic booked"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of booked session"
+        },
+        "time": {
+          "type": "string",
+          "description": "Time of booked session"
+        },
+        "price": {
+          "type": "number",
+          "description": "Amount paid in INR"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp when registered"
+        },
+        "paymentId": {
+          "type": "string",
+          "description": "Razorpay transaction reference ID"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "paid"],
+          "description": "Registration status"
+        }
+      },
+      "required": ["name", "email", "phone", "topic", "date", "time", "price", "createdAt", "paymentId", "status"]
+    },
+    "Query": {
+      "title": "Query",
+      "description": "Client queries and contact messages",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Sender name"
+        },
+        "email": {
+          "type": "string",
+          "description": "Sender email"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Sender phone number"
+        },
+        "message": {
+          "type": "string",
+          "description": "Query details or message"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp when submitted"
+        }
+      },
+      "required": ["name", "email", "message", "createdAt"]
+    },
+    "Blog": {
+      "title": "Blog",
+      "description": "Articles / Blogs written by the therapy academic team",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Title of the blog post"
+        },
+        "content": {
+          "type": "string",
+          "description": "Full Markdown/HTML content of the post"
+        },
+        "author": {
+          "type": "string",
+          "description": "Author of the article"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp when published"
+        }
+      },
+      "required": ["title", "content", "author", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/config/session": {
+      "schema": {
+        "$ref": "#/entities/SessionConfig"
+      },
+      "description": "Holds the session configuration"
+    },
+    "/registrations/{registrationId}": {
+      "schema": {
+        "$ref": "#/entities/Registration"
+      },
+      "description": "Registers clients for live sessions"
+    },
+    "/queries/{queryId}": {
+      "schema": {
+        "$ref": "#/entities/Query"
+      },
+      "description": "Submits client inquiries"
+    },
+    "/blogs/{blogId}": {
+      "schema": {
+        "$ref": "#/entities/Blog"
+      },
+      "description": "Stores site blog posts"
+    }
+  }
+}
