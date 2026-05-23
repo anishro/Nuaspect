@@ -14,7 +14,7 @@ import { RazorpayModal } from "./components/RazorpayModal";
 import { NuaspectDB } from "./db";
 import { SessionConfig } from "./types";
 import { motion, AnimatePresence } from "motion/react";
-import { Brain, Mail, Phone, MapPin, Shield, Github, Heart, Settings, Key } from "lucide-react";
+import { Brain, Mail, Phone, MapPin, Shield, Github, Heart, Settings, Key, X, Lock } from "lucide-react";
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<string>("home");
@@ -25,6 +25,13 @@ export default function App() {
     time: "19:00",
     price: 599
   });
+
+  const [passcodeModalOpen, setPasscodeModalOpen] = useState<boolean>(false);
+  const [enteredPasscode, setEnteredPasscode] = useState<string>("");
+  const [passcodeError, setPasscodeError] = useState<string>("");
+
+  // Default admin passcode - can be updated here easily
+  const ADMIN_PASSCODE = "8829";
 
   // Fetch session parameters on boot from our DB Adapter
   const loadActiveSession = async () => {
@@ -62,6 +69,18 @@ export default function App() {
       });
     } catch (err) {
       console.error("Failed to commit registration entry:", err);
+    }
+  };
+
+  const handleAdminGateSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (enteredPasscode === ADMIN_PASSCODE) {
+      setPasscodeError("");
+      setPasscodeModalOpen(false);
+      setEnteredPasscode("");
+      setCurrentTab("dashboard");
+    } else {
+      setPasscodeError("Invalid certification code. Access denied.");
     }
   };
 
@@ -187,16 +206,24 @@ export default function App() {
             {/* Subtle portal key triggering our HIDDEN Dashboard portal */}
             <div className="pt-4 border-t border-slate-800 flex justify-between items-center">
               <button
-                onClick={() => setCurrentTab("dashboard")}
+                onClick={() => {
+                  if (currentTab === "dashboard") {
+                    setCurrentTab("home");
+                  } else {
+                    setPasscodeError("");
+                    setEnteredPasscode("");
+                    setPasscodeModalOpen(true);
+                  }
+                }}
                 className={`inline-flex items-center gap-1.5 text-xs font-semibold py-1.5 px-3 rounded-lg border transition-all cursor-pointer ${
                   currentTab === "dashboard"
-                    ? "bg-amalfi border-amalfi text-white font-bold"
+                    ? "bg-[#10B981] border-[#10B981] text-white font-extrabold"
                     : "border-slate-800 hover:bg-white/5 hover:border-slate-700 text-slate-400"
                 }`}
                 title="Only certified staff personnel allowed"
               >
                 <Key className="w-3.5 h-3.5 shrink-0" />
-                <span>Conductor Portal Area</span>
+                <span>{currentTab === "dashboard" ? "Exit Dashboard" : "Conductor Portal Area"}</span>
               </button>
             </div>
           </div>
@@ -211,6 +238,78 @@ export default function App() {
         session={session}
         onSubmitRegistration={handleCompleteRegistration}
       />
+
+      {/* 5. Private Conductor Gate Passcode Modal */}
+      <AnimatePresence>
+        {passcodeModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Overlay */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setPasscodeModalOpen(false)}
+              className="absolute inset-0 bg-[#1E3A8A]/10 backdrop-blur-xs"
+            />
+
+            {/* Modal Box */}
+            <motion.div
+              initial={{ scale: 0.95, y: 15, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 15, opacity: 0 }}
+              className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl border border-[#E5E7EB] z-10 p-6"
+            >
+              <button 
+                onClick={() => setPasscodeModalOpen(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="text-center space-y-2 mb-6">
+                <div className="w-12 h-12 rounded-full bg-[#EFF6FF] border border-[#BFDBFE] text-amalfi flex items-center justify-center mx-auto shadow-md">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <h3 className="font-display font-extrabold text-lg text-gray-950">Administrative Gate</h3>
+                <p className="text-xs text-gray-400">Please provide the conductor access credential key to visualize the control panel dashboard.</p>
+              </div>
+
+              <form onSubmit={handleAdminGateSubmit} className="space-y-4">
+                {passcodeError && (
+                  <div className="bg-red-50 text-red-650 text-xs p-3 rounded-lg flex items-center gap-2 border border-red-100 font-bold uppercase tracking-wider text-center justify-center">
+                    <span>{passcodeError}</span>
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <label className="block text-[10px] uppercase font-mono font-bold tracking-widest text-gray-500 mb-1">Passcode Credential</label>
+                  <input 
+                    type="password" 
+                    required
+                    value={enteredPasscode}
+                    onChange={e => {
+                      setEnteredPasscode(e.target.value);
+                      if (passcodeError) setPasscodeError("");
+                    }}
+                    placeholder="••••"
+                    className="w-full text-center text-sm font-mono font-extrabold tracking-widest px-3.5 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-amalfi bg-gray-50/50"
+                  />
+                  <div className="text-center text-[10px] text-gray-400 font-mono mt-2 italic">
+                    Hint: Elena Vance's clinical license prefix in "About Us" (8829)
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full bg-[#1E3A8A] hover:bg-slate-900 text-white py-3 rounded-lg text-xs font-bold uppercase tracking-widest transition-all mt-2 cursor-pointer shadow-lg shadow-blue-100"
+                >
+                  Verify Certificate
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

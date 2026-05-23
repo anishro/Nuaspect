@@ -21,7 +21,91 @@ export function RazorpayModal({ isOpen, onClose, session, onSubmitRegistration }
   const [errorMessage, setErrorMessage] = useState("");
   const [simulatedTxId, setSimulatedTxId] = useState("");
 
+  const RAZORPAY_KEY_ID = (import.meta as any).env.VITE_RAZORPAY_KEY_ID || "";
+
   if (!isOpen) return null;
+
+  // Load Razorpay Script dynamically when needed
+  const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if ((window as any).Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  // Launch real Razorpay checkout
+  const handleRealRazorpayPayment = async () => {
+    if (!RAZORPAY_KEY_ID) {
+      setErrorMessage("Razorpay Key ID is not configured.");
+      return;
+    }
+
+    setErrorMessage("");
+    setStep("processing");
+
+    const loaded = await loadRazorpayScript();
+    if (!loaded) {
+      setErrorMessage("Failed to load Razorpay client secure library. Check internet accessibility.");
+      setStep("methods");
+      return;
+    }
+
+    const options = {
+      key: RAZORPAY_KEY_ID,
+      amount: session.price * 100, // amount in Paise
+      currency: "INR",
+      name: "Nuaspect Academic Care",
+      description: session.topic,
+      image: "https://cdn-icons-png.flaticon.com/512/3140/3140343.png",
+      handler: function (response: any) {
+        const pId = response.razorpay_payment_id || ("rzp_ref_" + Math.random().toString(36).substring(2, 14).toUpperCase());
+        setSimulatedTxId(pId);
+        setStep("success");
+        onSubmitRegistration({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          paymentId: pId
+        });
+      },
+      prefill: {
+        name: formData.name,
+        email: formData.email,
+        contact: formData.phone
+      },
+      notes: {
+        topic: session.topic,
+        type: "Interactive Laboratory Booking"
+      },
+      theme: {
+        color: "#1E3A8A"
+      },
+      modal: {
+        ondismiss: function () {
+          setStep("methods");
+        }
+      }
+    };
+
+    try {
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', function (response: any) {
+        setErrorMessage(response.error.description || "The transaction was declined by Razorpay.");
+        setStep("methods");
+      });
+      rzp.open();
+    } catch (err: any) {
+      setErrorMessage(err.message || "Could not launch Razorpay window.");
+      setStep("methods");
+    }
+  };
 
   // Validation
   const handleProceedToPayment = (e: React.FormEvent<HTMLFormElement>) => {
@@ -159,10 +243,50 @@ export function RazorpayModal({ isOpen, onClose, session, onSubmitRegistration }
 
             {step === "methods" && (
               <div className="space-y-4">
-                <div className="text-center mb-2">
-                  <h4 className="text-sm font-extrabold text-[#1E3A8A]">Select Simulation Option</h4>
-                  <p className="text-xs text-gray-400 mt-0.5">Academic sandbox — no real funds will be charged.</p>
-                </div>
+                {errorMessage && (
+                  <div className="bg-red-50 text-red-650 text-xs p-3 rounded-lg flex items-center gap-2 border border-red-100 font-bold uppercase tracking-wider text-center justify-center">
+                    <span>{errorMessage}</span>
+                  </div>
+                )}
+
+                {RAZORPAY_KEY_ID ? (
+                  <div className="space-y-4">
+                    <div className="text-center mb-2">
+                      <span className="inline-block bg-emerald-50 text-emerald-700 text-[10px] font-mono font-bold uppercase tracking-widest px-2 py-0.5 rounded border border-emerald-200 mb-1.5 animate-pulse">
+                        ● Razorpay Integration Configured
+                      </span>
+                      <h4 className="text-sm font-extrabold text-[#1E3A8A]">Launch Secure Portal Gateway</h4>
+                      <p className="text-xs text-gray-500 mt-0.5">Initialize real or sandbox payment interface with Razorpay API endpoints.</p>
+                    </div>
+
+                    <button 
+                      onClick={handleRealRazorpayPayment}
+                      className="w-full bg-[#1E3A8A] hover:bg-[#111827] text-white p-4 rounded-xl flex items-center justify-between text-left transition-all cursor-pointer shadow-lg shadow-blue-100 border border-[#BFDBFE]"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
+                          <CreditCard className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold font-display uppercase tracking-wider text-white">Proceed with Razorpay</p>
+                          <p className="text-[10px] text-white/70 mt-0.5">UPI, Netbanking, Cards & Wallets</p>
+                        </div>
+                      </div>
+                      <span className="text-xs font-mono font-extrabold bg-[#10B981] px-2.5 py-1 rounded text-white h-max">₹{session.price}</span>
+                    </button>
+
+                    <div className="relative flex py-2 items-center">
+                      <div className="flex-grow border-t border-gray-200"></div>
+                      <span className="flex-shrink mx-4 text-gray-400 text-[9px] uppercase font-mono font-bold">Or Sandbox Simulation</span>
+                      <div className="flex-grow border-t border-gray-200"></div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center mb-2">
+                    <h4 className="text-sm font-extrabold text-[#1E3A8A]">Select Simulation Option</h4>
+                    <p className="text-xs text-gray-400 mt-0.5">Academic sandbox — no real funds will be charged.</p>
+                  </div>
+                )}
 
                 {/* Simulated Payment Methods */}
                 <div className="space-y-2.5">
@@ -192,12 +316,18 @@ export function RazorpayModal({ isOpen, onClose, session, onSubmitRegistration }
                       </div>
                       <div>
                         <p className="text-xs font-bold text-gray-950">Cards / Netbanking</p>
-                        <p className="text-[10px] text-gray-400 mt-0.5">Visa, Mastercard, RuPay processing</p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">Visa, Mastercard, RuPay processing simulation</p>
                       </div>
                     </div>
                     <span className="text-[10px] border border-gray-200 text-gray-600 bg-gray-50 px-2.5 py-1 rounded font-mono font-bold">₹{session.price}</span>
                   </button>
                 </div>
+
+                {!RAZORPAY_KEY_ID && (
+                  <div className="bg-amber-50/50 border border-amber-100 p-3 rounded-lg text-[11px] text-amber-800 leading-relaxed font-medium">
+                    💡 <strong>GoLive Guide:</strong> Real Razorpay checkout is presently inactive. Declare <code>VITE_RAZORPAY_KEY_ID</code> in GoDaddy/cPanel or your system environment variables configuration to instantly unlock real-time transactions.
+                  </div>
+                )}
 
                 <div className="pt-3 border-t border-gray-100 flex items-center justify-between text-[10px] text-gray-400 font-medium">
                   <span className="flex items-center gap-1">
@@ -208,7 +338,10 @@ export function RazorpayModal({ isOpen, onClose, session, onSubmitRegistration }
                 </div>
 
                 <button
-                  onClick={() => setStep("details")}
+                  onClick={() => {
+                    setErrorMessage("");
+                    setStep("details");
+                  }}
                   className="w-full text-center text-xs font-bold text-amalfi hover:text-blue-900 tracking-wider uppercase py-1 mt-2 cursor-pointer"
                 >
                   ← Edit registration details
